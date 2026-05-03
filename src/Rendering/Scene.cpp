@@ -304,8 +304,8 @@ bool Scene::BuildSphere(Mesh& out, float radius, int slices, int stacks)
             UINT b = a + 1;
             UINT c = a + row;
             UINT d = c + 1;
-            idx.push_back(a); idx.push_back(c); idx.push_back(b);
-            idx.push_back(b); idx.push_back(c); idx.push_back(d);
+            idx.push_back(a); idx.push_back(b); idx.push_back(c);
+            idx.push_back(b); idx.push_back(d); idx.push_back(c);
         }
     }
     return BuildBufferGPU(out, v, idx);
