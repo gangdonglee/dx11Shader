@@ -23,11 +23,16 @@ public:
     void RenderPanels();
     void EndFrame();
 
+    // Tiny always-on FPS / frame-time overlay anchored top-right.
+    bool m_showFrameOverlay = true;
+
 private:
     static void ApplyDefault(App* a);
     static void ApplyRealisticSunset(App* a);
     static void ApplyBotWPlains(App* a);
     static void ApplySwimmingPool(App* a);
+
+    void RenderFrameOverlay();
 
     App* m_app;
     bool m_initialized;

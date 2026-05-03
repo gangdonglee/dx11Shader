@@ -184,12 +184,66 @@ void DebugUI::BeginFrame()
     ImGui::NewFrame();
 }
 
+void DebugUI::RenderFrameOverlay()
+{
+    if (!m_showFrameOverlay) return;
+
+    const float DISTANCE = 8.0f;
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImVec2 wpos  = ImVec2(vp->WorkPos.x + vp->WorkSize.x - DISTANCE,
+                          vp->WorkPos.y + DISTANCE);
+    ImVec2 pivot = ImVec2(1.0f, 0.0f);   // top-right anchor
+
+    ImGui::SetNextWindowPos(wpos, ImGuiCond_Always, pivot);
+    ImGui::SetNextWindowBgAlpha(0.55f);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration |
+        ImGuiWindowFlags_AlwaysAutoResize |
+        ImGuiWindowFlags_NoSavedSettings |
+        ImGuiWindowFlags_NoFocusOnAppearing |
+        ImGuiWindowFlags_NoNav |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoInputs;
+
+    if (ImGui::Begin("##FrameStats", nullptr, flags))
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        float fps = io.Framerate;
+        float ms  = (fps > 0.0f) ? (1000.0f / fps) : 0.0f;
+
+        // Color FPS by performance bucket: green ≥ 60, yellow ≥ 30, red below.
+        ImVec4 col = (fps >= 60.0f) ? ImVec4(0.55f, 1.00f, 0.55f, 1) :
+                     (fps >= 30.0f) ? ImVec4(1.00f, 0.85f, 0.40f, 1) :
+                                      ImVec4(1.00f, 0.45f, 0.45f, 1);
+        ImGui::TextColored(col, "%.1f FPS", fps);
+        ImGui::Text("%.2f ms", ms);
+
+        // Frame-time history ring buffer (~2 seconds at 60 fps).
+        static float history[120] = {};
+        static int   head = 0;
+        history[head] = ms;
+        head = (head + 1) % IM_ARRAYSIZE(history);
+
+        // Auto-scale Y: max(16.7, recent peak) so 60fps line is anchored.
+        float peak = 16.7f;
+        for (float v : history) if (v > peak) peak = v;
+
+        ImGui::PlotLines("##ft", history, IM_ARRAYSIZE(history), head,
+                         nullptr, 0.0f, peak, ImVec2(160.0f, 36.0f));
+    }
+    ImGui::End();
+}
+
 void DebugUI::RenderPanels()
 {
     if (!m_initialized) return;
 
+    RenderFrameOverlay();
+
     ImGui::Begin("Shader Lab");
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Checkbox("Show frame overlay", &m_showFrameOverlay);
     if (m_app)
     {
         D3DXVECTOR3 eye = m_app->m_camera.GetEyePos();
