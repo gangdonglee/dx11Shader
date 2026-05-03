@@ -26,18 +26,20 @@ cbuffer CB : register(b0)
     float4   Extinction;   // xyz = sigma RGB (m^-1), w = scatter strength
     float4   DetailParams; // x=enabled, y=strength, z=reflRoughness, w=skyMaxMip
     float4   DetailScales; // xyz = per-layer tile freq
+    float4   FoamPlane;    // x=originX, y=originZ, z=size, w=invSize
 };
 
 Texture2D<float4> SceneColor   : register(t0);
 Texture2D<float>  SceneDepth   : register(t1);
 TextureCube       SkyCube      : register(t2);
 Texture2D<float4> DetailNormal : register(t3);
+Texture2D<float>  FoamMapTex   : register(t4);
 SamplerState      SamLinear    : register(s0);
 SamplerState      SamPoint     : register(s1);
 SamplerState      SamLinearWrap: register(s2);
 
 struct VSIn  { float3 pos : POSITION; float2 uv : TEXCOORD0; };
-struct VSOut { float4 pos : SV_POSITION; float3 wpos : TEXCOORD0; float3 nor : TEXCOORD1; float foam : TEXCOORD2; };
+struct VSOut { float4 pos : SV_POSITION; float3 wpos : TEXCOORD0; float3 nor : TEXCOORD1; float3 jac : TEXCOORD2; };
 
 static const float PI = 3.14159265f;
 
@@ -53,7 +55,8 @@ static const float PI = 3.14159265f;
 
 void GerstnerWave(float2 dir, float wavelength, float amp, float speed, float Q,
                   float2 worldXZ, float t,
-                  inout float3 disp, inout float3 normalAccum)
+                  inout float3 disp, inout float3 normalAccum,
+                  inout float3 jacAccum)   // .x=∂dx/∂x, .y=∂dz/∂z, .z=∂dx/∂z (=∂dz/∂x)
 {
     float w     = 2.0f * PI / max(wavelength, 1e-3f);
     float phi   = speed * w;
@@ -66,13 +69,19 @@ void GerstnerWave(float2 dir, float wavelength, float amp, float speed, float Q,
     disp.z += qa * dir.y * c;
     disp.y += amp * s;
 
-    // Tangent-space contributions to the normal:
-    //   N = (Σ -dir.x w·A·c, 1 - Σ Q·w·A·s, Σ -dir.y w·A·c)
+    // Normal accumulators
     float wac = w * amp * c;
     float was = w * amp * s;
     normalAccum.x += -dir.x * wac;
     normalAccum.z += -dir.y * wac;
     normalAccum.y += Q * was;
+
+    // Jacobian of horizontal displacement. ∂(qa*dir.x*cos(theta))/∂x
+    //   = -qa*dir.x * sin(theta) * w*dir.x = -Q*A*w*sin*dir.x²
+    // Same for Z and the cross term.
+    jacAccum.x += -Q * dir.x * dir.x * was;
+    jacAccum.y += -Q * dir.y * dir.y * was;
+    jacAccum.z += -Q * dir.x * dir.y * was;
 }
 
 VSOut WaterVS(VSIn i)
@@ -89,6 +98,7 @@ VSOut WaterVS(VSIn i)
 
     float3 disp = float3(0,0,0);
     float3 nAcc = float3(0,0,0);
+    float3 jAcc = float3(0,0,0);
     float qShare  = Q / max((float)n, 1.0f);
 
     [loop]
@@ -97,24 +107,19 @@ VSOut WaterVS(VSIn i)
         if (k >= n) break;
         float t = (float)k * (1.0f / 32.0f);
 
-        // Direction: spread ±0.75 rad around wind axis with chaotic offsets.
         float ang = (t - 0.5f) * 1.5f + sin(t * 12.73f) * 0.35f + sin(t * 27.13f) * 0.15f;
         float ca  = cos(ang), sa = sin(ang);
         float2 d  = float2(ca * windAxis.x - sa * windAxis.y,
                            sa * windAxis.x + ca * windAxis.y);
 
-        // Wavelength: log-decreasing 2x → 0.04x base.
-        float lenT  = pow(t, 1.4f);
+        float lenT    = pow(t, 1.4f);
         float wavelen = baseLen * lerp(2.0f, 0.04f, lenT);
 
-        // Phillips: amp grows with wavelength. Multiply by wave-bank chaos.
         float chaos = 0.7f + 0.3f * sin(t * 41.7f);
         float amp   = baseAmp * (wavelen / baseLen) * 0.55f * chaos;
-
-        // Dispersion: shorter waves move proportionally faster.
         float spd   = baseSpeed * sqrt(baseLen / max(wavelen, 0.01f));
 
-        GerstnerWave(d, wavelen, amp, spd, qShare, wp.xz, Time, disp, nAcc);
+        GerstnerWave(d, wavelen, amp, spd, qShare, wp.xz, Time, disp, nAcc, jAcc);
     }
 
     wp += disp;
@@ -123,7 +128,7 @@ VSOut WaterVS(VSIn i)
     o.pos  = mul(float4(wp, 1.0f), ViewProj);
     o.wpos = wp;
     o.nor  = N;
-    o.foam = saturate(disp.y * 1.5f + Q * 0.3f);
+    o.jac  = jAcc;     // PS computes Jacobian determinant for foam mask
 
     return o;
 }
@@ -206,17 +211,28 @@ float3 SampleDetailNormal(float2 worldXZ, float t)
 float4 WaterPS(VSOut i) : SV_Target
 {
     float3 Ngeo = normalize(i.nor);
+
+    // Pre-compute a quick foam estimate so we can boost the detail
+    // normal strength on foam pixels — gives the foam its 3D rough look
+    // (vs. flat painted white) and naturally scatters specular/reflection.
+    float Jq = (1.0f + i.jac.x) * (1.0f + i.jac.y) - i.jac.z * i.jac.z;
+    float quickJacFoam = saturate((1.0f - Jq) * 1.4f);
+    float persistentFoamPre = 0.0f;
+    {
+        float2 fuv = (i.wpos.xz - FoamPlane.xy) * FoamPlane.w;
+        if (FoamPlane.z > 0.0f &&
+            fuv.x >= 0.0f && fuv.x <= 1.0f && fuv.y >= 0.0f && fuv.y <= 1.0f)
+            persistentFoamPre = FoamMapTex.SampleLevel(SamLinear, fuv, 0).r;
+    }
+    float quickFoam = saturate(max(quickJacFoam, persistentFoamPre));
+
     float3 N = Ngeo;
     if (DetailParams.x > 0.5f)
     {
-        // World-space horizontal plane: tangent = +X, bitangent = +Z, normal = +Y.
-        // Detail normal in tangent space; map to world by axis swap (Y_TS -> Y_WS,
-        // because TS Z is "up" and WS Y is "up" for our flat surface convention).
         float3 dTS = SampleDetailNormal(i.wpos.xz, Time);
-        // Convert TS (x, y=tangent-space-up, z=tangent-space-other) → WS for water (Y up).
-        // dTS already in (worldX, worldY, worldZ) form via construction above.
-        float  s   = DetailParams.y;
-        // Blend detail into geometric normal preserving Y dominance.
+        // Boost detail strength wherever foam is — foam = full-rough surface,
+        // so its mesoscale normal should be much choppier than smooth water.
+        float  s   = DetailParams.y * (1.0f + quickFoam * 3.0f);
         float3 perturbed = float3(Ngeo.x + dTS.x * s,
                                   Ngeo.y,
                                   Ngeo.z + dTS.z * s);
@@ -276,6 +292,43 @@ float4 WaterPS(VSOut i) : SV_Target
         belowSurface += sss;
     }
 
+    // ---- Foam (Jacobian crest + shore + persistent history map) ----
+    float J            = (1.0f + i.jac.x) * (1.0f + i.jac.y) - i.jac.z * i.jac.z;
+    float jacobianFoam = saturate((1.0f - J) * 1.4f);
+
+    float shoreFoam = saturate(1.0f - absorbed * 6.0f);
+    shoreFoam = pow(shoreFoam, 4.0f) * 0.7f;
+
+    // Persistent foam from FoamMap (decayed history of past Jacobian
+    // events at this world location). Mapped from worldXZ → UV using
+    // the same plane rect FoamMap was updated against.
+    float2 foamUV  = (i.wpos.xz - FoamPlane.xy) * FoamPlane.w;
+    float persistentFoam = (FoamPlane.z > 0.0f && foamUV.x >= 0.0f && foamUV.x <= 1.0f
+                            && foamUV.y >= 0.0f && foamUV.y <= 1.0f)
+        ? FoamMapTex.SampleLevel(SamLinear, foamUV, 0).r
+        : 0.0f;
+
+    float foamMask = saturate(max(jacobianFoam, persistentFoam) + shoreFoam);
+
+    // Organic noise pattern from the detail-normal map's alpha channel
+    // (filled with fBm height). Two scrolling layers blended.
+    float n1 = DetailNormal.Sample(SamLinearWrap, i.wpos.xz * 0.30f + Time * float2( 0.04f,  0.02f)).a;
+    float n2 = DetailNormal.Sample(SamLinearWrap, i.wpos.xz * 1.10f + Time * float2(-0.06f,  0.03f)).a;
+    float foamNoise = saturate(n1 * 0.6f + n2 * 0.4f);
+
+    // Threshold the noise against the mask: low mask hides everything,
+    // high mask reveals patches whose density grows with mask.
+    float threshold = 1.0f - foamMask;
+    float foam = smoothstep(threshold - 0.10f, threshold + 0.05f, foamNoise) * saturate(foamMask * 1.4f);
+
+    // Center vs edge color — center = pure white, edge = light cyan
+    // (subsurface tint of thin foam). Lerp by foam thickness proxy.
+    float3 foamCenter = float3(1.00f, 1.00f, 1.00f);
+    float3 foamEdge   = float3(0.82f, 0.92f, 1.00f);
+    float3 foamColor  = lerp(foamEdge, foamCenter, smoothstep(0.3f, 0.85f, foam));
+
+    belowSurface = lerp(belowSurface, foamColor, foam);
+
     // ---- Reflection: SSR with mipped cubemap sky as fallback ----
     float3 R       = reflect(-V, N);
     float  reflLod = saturate(DetailParams.z) * DetailParams.w;
@@ -285,16 +338,13 @@ float4 WaterPS(VSOut i) : SV_Target
     // ---- Fresnel + composite ----
     float F0      = 0.02f;
     float fresnel = F0 + (1.0f - F0) * pow(1.0f - NdotV, WindParams.w);
+    // Foam = full-rough; clamp its mirror reflection contribution so
+    // foam patches look matte instead of like polished plastic.
+    fresnel *= (1.0f - foam * 0.6f);
 
-    // Tight specular sun glint
+    // Tight specular sun glint — suppressed on foam (foam = full-rough).
     float spec = pow(saturate(dot(N, H)), max(ExtraParams.x, 4.0f));
-
-    // Foam over wave crests + at shore (very thin water depth)
-    float crestFoam = saturate(i.foam) * 0.85f;
-    float shoreFoam = saturate(1.0f - absorbed * 6.0f);
-    shoreFoam = pow(shoreFoam, 4.0f) * 0.7f;
-    float foam = saturate(crestFoam * crestFoam + shoreFoam);
-    belowSurface = lerp(belowSurface, float3(1,1,1), foam);
+    spec *= (1.0f - foam * 0.85f);
 
     float3 col = lerp(belowSurface, reflCol, fresnel);
     col += spec * LightColor * (1.0f - fresnel * 0.6f);

@@ -30,6 +30,7 @@ namespace
         float Extinction[4];   // xyz = sigma RGB, w = scatter strength (Beer-Lambert)
         float DetailParams[4]; // x=enabled, y=strength, z=reflRoughness, w=skyMaxMip
         float DetailScales[4]; // xyz = per-layer tile freq, w = unused
+        float FoamPlane[4];    // x=originX, y=originZ, z=size, w=invSize
     };
     static_assert((sizeof(WaterCB) % 16) == 0, "WaterCB align");
 
@@ -259,7 +260,10 @@ bool Water::CreateDetailNormalMap(int N)
             p[0] = (uint8_t)((nx * 0.5f + 0.5f) * 255.0f);
             p[1] = (uint8_t)((ny * 0.5f + 0.5f) * 255.0f);
             p[2] = (uint8_t)((nz * 0.5f + 0.5f) * 255.0f);
-            p[3] = 255;
+            // Alpha = the raw fBm height [0,1]. Sampled in WaterPS as
+            // "foam noise" — gives organic patches instead of solid white.
+            float h = H[(size_t)y * N + x];
+            p[3] = (uint8_t)(h * 255.0f);
         }
     }
 
@@ -340,6 +344,8 @@ void Water::Render(const D3DXMATRIX& view, const D3DXMATRIX& proj,
                    ID3D11ShaderResourceView* sceneColorSRV,
                    ID3D11ShaderResourceView* sceneDepthSRV,
                    ID3D11ShaderResourceView* skyCubeSRV,
+                   ID3D11ShaderResourceView* foamMapSRV,
+                   float foamPlaneOriginX, float foamPlaneOriginZ, float foamPlaneSize,
                    float screenW, float screenH)
 {
     if (!m_enabled || m_indexCount == 0) return;
@@ -405,6 +411,11 @@ void Water::Render(const D3DXMATRIX& view, const D3DXMATRIX& proj,
     cb.DetailScales[1] = m_detailScale[1];
     cb.DetailScales[2] = m_detailScale[2];
 
+    cb.FoamPlane[0] = foamPlaneOriginX;
+    cb.FoamPlane[1] = foamPlaneOriginZ;
+    cb.FoamPlane[2] = foamPlaneSize;
+    cb.FoamPlane[3] = (foamPlaneSize > 0.0f) ? 1.0f / foamPlaneSize : 0.0f;
+
     D3D11_MAPPED_SUBRESOURCE map;
     if (SUCCEEDED(ctx->Map(m_cb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &map)))
     {
@@ -430,16 +441,19 @@ void Water::Render(const D3DXMATRIX& view, const D3DXMATRIX& proj,
     ctx->VSSetConstantBuffers(0, 1, cbs);
     ctx->PSSetConstantBuffers(0, 1, cbs);
 
-    ID3D11ShaderResourceView* srvs[4] = { sceneColorSRV, sceneDepthSRV, skyCubeSRV, m_detailNormalSRV.Get() };
-    ctx->PSSetShaderResources(0, 4, srvs);
+    ID3D11ShaderResourceView* srvs[5] = {
+        sceneColorSRV, sceneDepthSRV, skyCubeSRV,
+        m_detailNormalSRV.Get(), foamMapSRV
+    };
+    ctx->PSSetShaderResources(0, 5, srvs);
     ID3D11SamplerState* samps[3] = { m_sampLinear.Get(), m_sampPoint.Get(), m_sampLinearWrap.Get() };
     ctx->PSSetSamplers(0, 3, samps);
 
     ctx->DrawIndexed(m_indexCount, 0, 0);
 
     // Unbind to keep the device clean for the composite step.
-    ID3D11ShaderResourceView* nullSRV[4] = { nullptr, nullptr, nullptr, nullptr };
-    ctx->PSSetShaderResources(0, 4, nullSRV);
+    ID3D11ShaderResourceView* nullSRV[5] = { nullptr, nullptr, nullptr, nullptr, nullptr };
+    ctx->PSSetShaderResources(0, 5, nullSRV);
 }
 
 void Water::GuiPanel()

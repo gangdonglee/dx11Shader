@@ -9,6 +9,7 @@
 #include "Skybox.h"
 #include "ShadowMap.h"
 #include "Water.h"
+#include "FoamMap.h"
 #include "PostProcess.h"
 #include "TAA.h"
 #include "DebugUI.h"
@@ -45,6 +46,7 @@ private:
     ShadowMap        m_shadow;
     Scene            m_scene;
     Water            m_water;
+    FoamMap          m_foam;
     PostProcess      m_post;
     TAA              m_taa;
     DebugUI          m_debugUI;

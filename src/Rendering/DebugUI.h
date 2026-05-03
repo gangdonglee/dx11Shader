@@ -27,6 +27,7 @@ private:
     static void ApplyDefault(App* a);
     static void ApplyRealisticSunset(App* a);
     static void ApplyBotWPlains(App* a);
+    static void ApplySwimmingPool(App* a);
 
     App* m_app;
     bool m_initialized;

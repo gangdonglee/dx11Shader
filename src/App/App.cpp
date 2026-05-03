@@ -123,6 +123,7 @@ bool App::Init(HINSTANCE hInst, int nCmdShow)
     if (!m_skybox.Init(&m_device)) { printf("[ERROR] Skybox\n"); return false; }
     if (!m_shadow.Init(&m_device, 2048)) { printf("[ERROR] ShadowMap\n"); return false; }
     if (!m_water.Init(&m_device))  { printf("[ERROR] Water\n"); return false; }
+    if (!m_foam.Init(&m_device, 1024)) { printf("[ERROR] FoamMap\n"); return false; }
     if (!m_post.Init(&m_device))   { printf("[ERROR] PostProcess\n"); return false; }
     if (!m_taa.Init(&m_device, WIDTH, HEIGHT)) { printf("[ERROR] TAA\n"); return false; }
     if (!CreateSceneColorRT(WIDTH, HEIGHT)) { printf("[ERROR] SceneColor RT\n"); return false; }
@@ -158,6 +159,26 @@ int App::Run()
         m_keys.SetImGuiCapture(m_debugUI.WantCaptureKeyboard());
         m_camera.Update(dt, &m_keys);
         m_water.Update(dt);
+
+        // Foam map: world-space persistence buffer. Updated each frame
+        // before the water draw so the SRV is fresh.
+        {
+            FoamMap::UpdateInputs fi;
+            float ps = m_water.GetPlaneSize();
+            fi.planeOriginX = -ps * 0.5f;
+            fi.planeOriginZ = -ps * 0.5f;
+            fi.planeSize    = ps;
+            fi.waveAmp   = m_water.GetWaveAmp();
+            fi.waveLen   = m_water.GetWaveLen();
+            fi.waveSpeed = m_water.GetWaveSpeed();
+            fi.waveSteep = m_water.GetWaveSteep();
+            float wd = m_water.GetWindDir();
+            fi.windCos = std::cos(wd);
+            fi.windSin = std::sin(wd);
+            fi.numWaves = m_water.GetNumWaves();
+            fi.time = m_water.GetTime();
+            m_foam.Update(fi);
+        }
 
         ID3D11DeviceContext* ctx = m_device.GetContext();
         ID3D11DepthStencilView* dsv = m_device.GetDepthStencilView();
@@ -222,6 +243,10 @@ int App::Run()
         m_water.Render(view, proj, eye, lightDir, lightCol,
                        m_sceneColorCopySRV.Get(), m_device.GetDepthSRV(),
                        m_skybox.GetCubeSRV(),
+                       m_foam.GetSRV(),
+                       m_foam.GetPlaneOriginX(),
+                       m_foam.GetPlaneOriginZ(),
+                       m_foam.GetPlaneSize(),
                        (float)WIDTH, (float)HEIGHT);
 
         // 6) TAA resolve: blends SceneColor with the reprojected
@@ -273,6 +298,7 @@ void App::Shutdown()
     ReleaseSceneColorRT();
     m_taa.Shutdown();
     m_post.Shutdown();
+    m_foam.Shutdown();
     m_water.Shutdown();
     m_shadow.Shutdown();
     m_skybox.Shutdown();

@@ -34,7 +34,19 @@ public:
                 ID3D11ShaderResourceView* sceneColorSRV,
                 ID3D11ShaderResourceView* sceneDepthSRV,
                 ID3D11ShaderResourceView* skyCubeSRV,
+                ID3D11ShaderResourceView* foamMapSRV,
+                float foamPlaneOriginX, float foamPlaneOriginZ, float foamPlaneSize,
                 float screenW, float screenH);
+
+    // Wave params used by FoamMap for Jacobian recomputation.
+    float GetWaveAmp()    const { return m_waveAmp; }
+    float GetWaveLen()    const { return m_waveLen; }
+    float GetWaveSpeed()  const { return m_waveSpeed; }
+    float GetWaveSteep()  const { return m_waveSteep; }
+    float GetWindDir()    const { return m_windDir; }
+    int   GetNumWaves()   const { return m_numWaves; }
+    float GetTime()       const { return m_time; }
+    float GetPlaneSize()  const { return m_planeSize; }
 
     void GuiPanel();
 
@@ -42,6 +54,18 @@ public:
     bool  GetEnabled() const { return m_enabled; }
     void  SetWaterY(float y) { m_waterY = y; }
     float GetWaterY() const  { return m_waterY; }
+
+    // Setters used by preset functions (DebugUI). Values are clamped to
+    // sensible ranges by the source slider widgets, but presets bypass
+    // those so callers should pre-validate.
+    void  SetWaveAmp(float a)         { m_waveAmp = a; }
+    void  SetRefractStrength(float s) { m_refractStrength = s; }
+    void  SetFresnelPow(float p)      { m_fresnelPow = p; }
+    void  SetSkyTint(float t)         { m_skyTint = t; }
+    void  SetSsrEnabled(bool b)       { m_ssrEnabled = b; }
+    void  SetExtinction(float r, float g, float b)
+                                       { m_extinction[0]=r; m_extinction[1]=g; m_extinction[2]=b; }
+    void  SetScatterStrength(float s) { m_scatterStrength = s; }
 
 private:
     struct Vertex

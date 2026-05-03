@@ -69,6 +69,7 @@ copy /y "$(ProjectDir)assets\Shaders\post.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Shaders\skybake.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Shaders\skybox.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Shaders\taa.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\foam.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Textures\noise.png" "$(OutDir)" &gt;nul 2&gt;&amp;1
 exit /b 0</Command>
     </PostBuildEvent>
@@ -104,6 +105,7 @@ copy /y "$(ProjectDir)assets\Shaders\post.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Shaders\skybake.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Shaders\skybox.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Shaders\taa.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\foam.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
 copy /y "$(ProjectDir)assets\Textures\noise.png" "$(OutDir)" &gt;nul 2&gt;&amp;1
 exit /b 0</Command>
     </PostBuildEvent>
@@ -125,6 +127,7 @@ exit /b 0</Command>
     <ClCompile Include="src\Rendering\Skybox.cpp" />
     <ClCompile Include="src\Rendering\ShadowMap.cpp" />
     <ClCompile Include="src\Rendering\Water.cpp" />
+    <ClCompile Include="src\Rendering\FoamMap.cpp" />
     <ClCompile Include="src\Rendering\PostProcess.cpp" />
     <ClCompile Include="src\Rendering\TAA.cpp" />
     <ClCompile Include="src\Rendering\DebugUI.cpp" />
@@ -170,6 +173,7 @@ exit /b 0</Command>
     <ClInclude Include="src\Rendering\Skybox.h" />
     <ClInclude Include="src\Rendering\ShadowMap.h" />
     <ClInclude Include="src\Rendering\Water.h" />
+    <ClInclude Include="src\Rendering\FoamMap.h" />
     <ClInclude Include="src\Rendering\PostProcess.h" />
     <ClInclude Include="src\Rendering\TAA.h" />
     <ClInclude Include="src\Rendering\DebugUI.h" />
@@ -179,6 +183,7 @@ exit /b 0</Command>
     <None Include="assets\Shaders\scene.hlsl" />
     <None Include="assets\Shaders\water.hlsl" />
     <None Include="assets\Shaders\post.hlsl" />
+    <None Include="assets\Shaders\foam.hlsl" />
     <None Include="assets\Shaders\skybake.hlsl" />
     <None Include="assets\Shaders\skybox.hlsl" />
     <None Include="assets\Shaders\taa.hlsl" />

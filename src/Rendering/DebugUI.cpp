@@ -9,6 +9,7 @@
 #include "Skybox.h"
 #include "ShadowMap.h"
 #include "Water.h"
+#include "FoamMap.h"
 #include "PostProcess.h"
 #include "TAA.h"
 
@@ -59,6 +60,37 @@ void DebugUI::ApplyRealisticSunset(App* a)
     a->m_post.m_gamma        = 1.05f;
     float lift[3] = { 0.04f, 0.00f, -0.03f };
     float gain[3] = { 1.10f, 0.98f, 0.85f };
+    for (int i=0;i<3;++i) { a->m_post.m_lift[i] = lift[i]; a->m_post.m_gain[i] = gain[i]; }
+}
+
+void DebugUI::ApplySwimmingPool(App* a)
+{
+    // Crystal-clear shallow water: minimal absorption + scatter, tight
+    // fresnel so refraction dominates from above, calm waves, water
+    // raised so the box/sphere row is partially submerged.
+    a->m_scene.SetMode(Scene::Mode_PBR);
+    a->m_sun.SetYaw(0.40f);
+    a->m_sun.SetPitch(0.85f);          // near-overhead sun
+    a->m_sun.SetIntensity(1.15f);
+    a->m_sun.SetColor(1.00f, 0.98f, 0.92f);
+
+    a->m_water.SetWaterY(1.40f);       // submerge boxes / partial spheres
+    a->m_water.SetWaveAmp(0.04f);
+    a->m_water.SetFresnelPow(10.0f);
+    a->m_water.SetSkyTint(0.55f);
+    a->m_water.SetSsrEnabled(false);
+    a->m_water.SetRefractStrength(0.012f);
+    a->m_water.SetExtinction(0.05f, 0.02f, 0.01f);
+    a->m_water.SetScatterStrength(0.20f);
+
+    a->m_post.m_outlineEnabled = false;
+    a->m_post.m_fogEnabled     = false;     // intimate pool — no atmospheric fog
+    a->m_post.m_gradeEnabled   = true;
+    a->m_post.m_exposure       = 1.10f;
+    a->m_post.m_saturation     = 1.10f;
+    a->m_post.m_gamma          = 1.0f;
+    float lift[3] = { 0.0f, 0.01f, 0.02f };
+    float gain[3] = { 1.0f, 1.05f, 1.05f };
     for (int i=0;i<3;++i) { a->m_post.m_lift[i] = lift[i]; a->m_post.m_gain[i] = gain[i]; }
 }
 
@@ -175,6 +207,8 @@ void DebugUI::RenderPanels()
         if (ImGui::Button("Realistic Sunset"))  ApplyRealisticSunset(m_app);
         ImGui::SameLine();
         if (ImGui::Button("BotW Plains"))       ApplyBotWPlains(m_app);
+        ImGui::SameLine();
+        if (ImGui::Button("Swimming Pool"))     ApplySwimmingPool(m_app);
         ImGui::Separator();
         m_app->m_sun.GuiPanel();
         ImGui::Separator();
@@ -185,6 +219,8 @@ void DebugUI::RenderPanels()
         m_app->m_scene.GuiPanel();
         ImGui::Separator();
         m_app->m_water.GuiPanel();
+        ImGui::Separator();
+        m_app->m_foam.GuiPanel();
         ImGui::Separator();
         m_app->m_taa.GuiPanel();
         ImGui::Separator();

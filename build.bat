@@ -49,6 +49,7 @@ copy /y "%SCRIPT_DIR%assets\Shaders\post.hlsl" "%SCRIPT_DIR%bin\" >nul 2>&1
 copy /y "%SCRIPT_DIR%assets\Shaders\skybake.hlsl" "%SCRIPT_DIR%bin\" >nul 2>&1
 copy /y "%SCRIPT_DIR%assets\Shaders\skybox.hlsl" "%SCRIPT_DIR%bin\" >nul 2>&1
 copy /y "%SCRIPT_DIR%assets\Shaders\taa.hlsl" "%SCRIPT_DIR%bin\" >nul 2>&1
+copy /y "%SCRIPT_DIR%assets\Shaders\foam.hlsl" "%SCRIPT_DIR%bin\" >nul 2>&1
 copy /y "%SCRIPT_DIR%assets\Textures\noise.png" "%SCRIPT_DIR%bin\" >nul 2>&1
 
 echo.
