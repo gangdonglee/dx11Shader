@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{B2C3D4E5-F6A7-4901-BCDE-F23456789012}</ProjectGuid>
+    <RootNamespace>Shader</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)bin\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Configuration)\</IntDir>
+    <TargetName>app</TargetName>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\App;$(ProjectDir)src\Core;$(ProjectDir)src\Rendering;$(ProjectDir)lib\imgui;$(ProjectDir)lib\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <Optimization>Disabled</Optimization>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <ForcedIncludeFiles>pch.h</ForcedIncludeFiles>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y "$(ProjectDir)assets\Shaders\scene.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\water.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\post.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\skybake.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\skybox.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\taa.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Textures\noise.png" "$(OutDir)" &gt;nul 2&gt;&amp;1
+exit /b 0</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;$(ProjectDir)src\App;$(ProjectDir)src\Core;$(ProjectDir)src\Rendering;$(ProjectDir)lib\imgui;$(ProjectDir)lib\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <ForcedIncludeFiles>pch.h</ForcedIncludeFiles>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>d3d11.lib;dxgi.lib;d3dcompiler.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <PostBuildEvent>
+      <Command>copy /y "$(ProjectDir)assets\Shaders\scene.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\water.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\post.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\skybake.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\skybox.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Shaders\taa.hlsl" "$(OutDir)" &gt;nul 2&gt;&amp;1
+copy /y "$(ProjectDir)assets\Textures\noise.png" "$(OutDir)" &gt;nul 2&gt;&amp;1
+exit /b 0</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="src\pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="src\App\main.cpp" />
+    <ClCompile Include="src\App\App.cpp" />
+    <ClCompile Include="src\Core\DX11Device.cpp" />
+    <ClCompile Include="src\Core\KeyManager.cpp" />
+    <ClCompile Include="src\Core\Camera.cpp" />
+    <ClCompile Include="src\Core\DirectionalLight.cpp" />
+    <ClCompile Include="src\Rendering\Scene.cpp" />
+    <ClCompile Include="src\Rendering\Skybox.cpp" />
+    <ClCompile Include="src\Rendering\ShadowMap.cpp" />
+    <ClCompile Include="src\Rendering\Water.cpp" />
+    <ClCompile Include="src\Rendering\PostProcess.cpp" />
+    <ClCompile Include="src\Rendering\TAA.cpp" />
+    <ClCompile Include="src\Rendering\DebugUI.cpp" />
+    <ClCompile Include="lib\imgui\imgui.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="lib\imgui\imgui_draw.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="lib\imgui\imgui_tables.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="lib\imgui\imgui_widgets.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="lib\imgui\imgui_demo.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="lib\imgui\backends\imgui_impl_dx11.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+    <ClCompile Include="lib\imgui\backends\imgui_impl_win32.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles />
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\App\App.h" />
+    <ClInclude Include="src\Core\DX11Device.h" />
+    <ClInclude Include="src\Core\MathTypes.h" />
+    <ClInclude Include="src\Core\KeyManager.h" />
+    <ClInclude Include="src\Core\Camera.h" />
+    <ClInclude Include="src\Core\DirectionalLight.h" />
+    <ClInclude Include="src\Rendering\Scene.h" />
+    <ClInclude Include="src\Rendering\Skybox.h" />
+    <ClInclude Include="src\Rendering\ShadowMap.h" />
+    <ClInclude Include="src\Rendering\Water.h" />
+    <ClInclude Include="src\Rendering\PostProcess.h" />
+    <ClInclude Include="src\Rendering\TAA.h" />
+    <ClInclude Include="src\Rendering\DebugUI.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="assets\Shaders\scene.hlsl" />
+    <None Include="assets\Shaders\water.hlsl" />
+    <None Include="assets\Shaders\post.hlsl" />
+    <None Include="assets\Shaders\skybake.hlsl" />
+    <None Include="assets\Shaders\skybox.hlsl" />
+    <None Include="assets\Shaders\taa.hlsl" />
+    <None Include="assets\Shaders\ocean.hlsl" />
+    <None Include="assets\Shaders\lighting.fx" />
+    <None Include="assets\Shaders\terrain_reflection.hlsl" />
+    <None Include="assets\Textures\noise.png" />
+    <None Include="build.bat" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

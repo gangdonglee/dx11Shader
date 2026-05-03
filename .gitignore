@@ -1,0 +1,23 @@
+# Build output
+bin/
+obj/
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.idb
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.opendb
+*.VC.db
+*.VC.opendb
+
+# ImGui runtime state
+imgui.ini
+
+# Claude Code local settings
+.claude/
